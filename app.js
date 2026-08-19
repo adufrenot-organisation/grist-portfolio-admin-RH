@@ -1,20 +1,18 @@
-const VERSION="2.3";
+const VERSION="2.4";
 const T={team:"Team",teams:"Team_ref",motifs:"Motifs_RH",alerts:"Parametres_Alertes"};
-const S={team:[],teams:[],motifs:[],alerts:[],editing:null,available:[],errors:{}};
+const S={team:[],teams:[],motifs:[],alerts:[],editing:null,available:[],errors:{},log:[]};
 
 const $=id=>document.getElementById(id);
 const esc=(s="")=>String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 const num=(v,d=0)=>Number.isFinite(Number(v))?Number(v):d;
 const toast=m=>{const t=$("toast");if(!t)return; t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2600)};
 
-function setDiagnostic(messages, isError=false){
-  const box=$("diagnostic"), body=$("diagnosticBody");
-  if(!box||!body)return;
-  if(!messages || !messages.length){box.hidden=true;return;}
-  box.hidden=false;
-  box.classList.toggle("error",!!isError);
-  body.innerHTML="<ul>"+messages.map(m=>`<li>${esc(m)}</li>`).join("")+"</ul>";
+function logError(action, message){
+  S.log.unshift({time:new Date(),action,message:String(message)});
+  if(S.log.length>100)S.log.length=100;
+  renderDiagnostic();
 }
+function clearLog(){S.log=[];renderDiagnostic();}
 
 function normalizeRecords(raw, tableId){
   // Format 1 : tableau de lignes [{id:1, ...}, ...]
@@ -66,11 +64,10 @@ async function safeFetch(tableId){
   try{
     const raw=await grist.docApi.fetchTable(tableId);
     const rows=normalizeRecords(raw,tableId);
-    console.info(`[RH Admin] ${tableId}:`, rows.length, "ligne(s)", rows.slice(0,2));
     return rows;
   }catch(e){
     S.errors[tableId]=`${tableId} : ${e?.message||String(e)}`;
-    console.error("fetchTable/normalize",tableId,e);
+    logError(`Chargement ${tableId}`, e?.message||String(e));
     return [];
   }
 }
@@ -81,9 +78,9 @@ async function load(){
   try{
     S.available=await grist.docApi.listTables();
   }catch(e){
-    $("sync").textContent=`V${VERSION} · Accès document impossible`;
-    setDiagnostic([`Impossible de lire la liste des tables : ${e?.message||String(e)}`,
-                   "Vérifie que le widget a bien le niveau d'accès « Full document access »."],true);
+    $("sync").textContent=`V${VERSION} · Erreur`;
+    logError("Liste des tables", e?.message||String(e));
+    renderDiagnostic();
     return;
   }
 
@@ -93,19 +90,6 @@ async function load(){
   ]);
   S.team=team; S.teams=teams; S.motifs=motifs; S.alerts=alerts;
 
-  const messages=[];
-  messages.push(`Tables visibles par le widget : ${S.available.join(", ") || "aucune"}`);
-  if(S.errors[T.team]) messages.push(S.errors[T.team]);
-  else messages.push(`Team : ${S.team.length} ressource(s) chargée(s).`);
-  if(S.errors[T.teams]) messages.push(S.errors[T.teams]);
-  else messages.push(`Team_ref : ${S.teams.length} équipe(s) chargée(s).`);
-  if(S.errors[T.motifs]) messages.push(`${S.errors[T.motifs]} — l'onglet Motifs restera vide.`);
-  else messages.push(`Motifs_RH : ${S.motifs.length} motif(s) chargé(s).`);
-  if(S.errors[T.alerts]) messages.push(`${S.errors[T.alerts]} — l'onglet Seuils restera vide.`);
-  else messages.push(`Parametres_Alertes : ${S.alerts.length} règle(s) chargée(s).`);
-
-  const hasCoreError=!!S.errors[T.team] || !!S.errors[T.teams];
-  setDiagnostic(messages,hasCoreError);
   $("sync").textContent=`V${VERSION} · Team ${S.team.length} · Équipes ${S.teams.length}`;
   render();
 }
@@ -115,6 +99,7 @@ function render(){
   thresholds();
   motifs();
   teams();
+  renderDiagnostic();
 }
 
 function teamName(id){
@@ -206,7 +191,7 @@ function thresholds(){
         Seuil_Rouge:num(tr.querySelector(".red").value)
       }});
       toast("Seuil enregistré"); await load();
-    }catch(e){toast(e?.message||String(e));}
+    }catch(e){logError("Enregistrement seuil",e?.message||String(e));toast(e?.message||String(e));}
   }));
 }
 
@@ -236,7 +221,7 @@ function motifs(){
         Compte_Capacite:tr.querySelector(".cap").checked
       }});
       toast("Motif enregistré"); await load();
-    }catch(e){toast(e?.message||String(e));}
+    }catch(e){logError("Enregistrement motif",e?.message||String(e));toast(e?.message||String(e));}
   }));
 }
 
@@ -247,18 +232,39 @@ function teams(){
     : `<tr><td colspan="3" class="empty">${S.errors[T.teams] ? esc(S.errors[T.teams]) : "La table Team_ref est présente mais vide."}</td></tr>`;
 }
 
+function renderDiagnostic(){
+  const tableBody=$("diagTables"), logBody=$("diagLog"), badge=$("diagBadge");
+  if(!tableBody||!logBody)return;
+  const defs=[
+    [T.team,S.team],[T.teams,S.teams],[T.motifs,S.motifs],[T.alerts,S.alerts]
+  ];
+  tableBody.innerHTML=defs.map(([name,rows])=>{
+    const err=S.errors[name];
+    const visible=S.available.includes(name);
+    const state=err?"Erreur":(visible?"OK":"Absente");
+    const detail=err||(!visible?"Table non visible par le widget":"");
+    return `<tr><td><strong>${esc(name)}</strong></td><td>${esc(state)}</td><td>${visible&&!err?rows.length:"—"}</td><td>${esc(detail)}</td></tr>`;
+  }).join("");
+  logBody.innerHTML=S.log.length?S.log.map(x=>`<tr><td>${x.time.toLocaleTimeString("fr-FR")}</td><td>${esc(x.action)}</td><td>${esc(x.message)}</td></tr>`).join(""):'<tr><td colspan="3" class="empty">Aucune erreur enregistrée pendant cette session.</td></tr>';
+  if(badge){
+    badge.textContent=S.log.length?`• ${S.log.length}`:"";
+    badge.className=S.log.length?"diag-count":"";
+  }
+}
+
 function nav(){
   document.querySelectorAll(".nav-item").forEach(b=>b.addEventListener("click",()=>{
     document.querySelectorAll(".nav-item").forEach(x=>x.classList.remove("active"));
     b.classList.add("active");
     document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));
-    const target=$(b.dataset.view);
+    const target=b.dataset.view==="diagnostic"?$("diagnosticView"):$(b.dataset.view);
     if(target)target.classList.add("active");
     const t={
       ressources:["Ressources","Référentiel Team partagé avec le PMO"],
       seuils:["Seuils","Paramètres des alertes RH"],
       motifs:["Motifs RH","Règles de présence et capacité"],
-      equipes:["Équipes","Référentiel Team_ref partagé avec le PMO"]
+      equipes:["Équipes","Référentiel Team_ref partagé avec le PMO"],
+      diagnostic:["Diagnostic","État technique du widget et erreurs de la session"]
     };
     if(t[b.dataset.view]){
       $("title").textContent=t[b.dataset.view][0];
@@ -272,7 +278,9 @@ function init(){
   $("refresh").addEventListener("click",load);
   $("newResource").addEventListener("click",reset);
   $("resetResource").addEventListener("click",reset);
-  $("saveResource").addEventListener("click",()=>saveResource().catch(e=>toast(e?.message||String(e))));
+  $("saveResource").addEventListener("click",()=>saveResource().catch(e=>{logError("Enregistrement ressource",e?.message||String(e));toast(e?.message||String(e));}));
+  $("diagRefresh").addEventListener("click",load);
+  $("diagClear").addEventListener("click",clearLog);
   grist.ready({requiredAccess:"full"});
   load();
 }

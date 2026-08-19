@@ -1,30 +1,11 @@
-# RH / PMO Administration V2.3
+# Admin RH/PMO V2.4
 
-Corrections principales :
-- navigation du menu initialisée indépendamment du chargement Grist ;
-- chargement indépendant de chaque table ;
-- `Team` et `Team_ref` restent utilisables même si les tables RH ne sont pas encore migrées ;
-- diagnostic visible des tables absentes et erreurs d'accès ;
-- version affichée dans le pied du menu (`V2.3`).
+Version production avec diagnostic séparé.
 
-Tables attendues :
-- Team
-- Team_ref
-- Motifs_RH
-- Parametres_Alertes
-
-Le widget demande `Full document access`.
-
-Si `Motifs_RH` ou `Parametres_Alertes` sont absentes, les onglets correspondants affichent un message,
-mais l'administration des ressources Team continue de fonctionner.
-
-
-## Correction V2.3
-
-`fetchTable()` est désormais normalisé automatiquement si Grist renvoie :
-- un tableau de lignes ;
-- un objet colonne-par-colonne (`{id:[...], nom:[...], ...}`) ;
-- un objet avec `records`;
-- un wrapper `columns` ou `data`.
-
-Le diagnostic affiche aussi la liste exacte des tables visibles par le widget.
+- Aucun bandeau technique sur les écrans métier.
+- Onglet `Diagnostic` dans le menu gauche.
+- État de Team, Team_ref, Motifs_RH et Parametres_Alertes.
+- Nombre de lignes chargées.
+- Journal des erreurs de la session avec heure et action.
+- Boutons Actualiser et Effacer le journal.
+- Un compteur discret apparaît à côté de Diagnostic uniquement lorsqu'une erreur a été journalisée.

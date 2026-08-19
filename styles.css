@@ -17,3 +17,5 @@ svg{width:100%;height:300px;display:block}.gridline{stroke:#e5ebf0}.axis{fill:#7
 .diagnostic{margin:-6px 0 18px;padding:12px 14px;border:1px solid #f3c96b;border-left:5px solid #f59e0b;border-radius:10px;background:#fffaf0;color:#5c4300;font-size:13px}
 .diagnostic.error{border-color:#efaaaa;border-left-color:#dc2626;background:#fff6f6;color:#7a1f1f}
 .diagnostic ul{margin:7px 0 0 18px;padding:0}.diagnostic li{margin:3px 0}
+
+.diag-count{font-size:11px;color:#fbbf24;font-weight:800;margin-left:4px}
