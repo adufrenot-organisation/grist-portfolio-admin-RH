@@ -1,11 +1,11 @@
-# RH / PMO Administration V2.2
+# RH / PMO Administration V2.3
 
 Corrections principales :
 - navigation du menu initialisée indépendamment du chargement Grist ;
 - chargement indépendant de chaque table ;
 - `Team` et `Team_ref` restent utilisables même si les tables RH ne sont pas encore migrées ;
 - diagnostic visible des tables absentes et erreurs d'accès ;
-- version affichée dans le pied du menu (`V2.2`).
+- version affichée dans le pied du menu (`V2.3`).
 
 Tables attendues :
 - Team
@@ -17,3 +17,14 @@ Le widget demande `Full document access`.
 
 Si `Motifs_RH` ou `Parametres_Alertes` sont absentes, les onglets correspondants affichent un message,
 mais l'administration des ressources Team continue de fonctionner.
+
+
+## Correction V2.3
+
+`fetchTable()` est désormais normalisé automatiquement si Grist renvoie :
+- un tableau de lignes ;
+- un objet colonne-par-colonne (`{id:[...], nom:[...], ...}`) ;
+- un objet avec `records`;
+- un wrapper `columns` ou `data`.
+
+Le diagnostic affiche aussi la liste exacte des tables visibles par le widget.

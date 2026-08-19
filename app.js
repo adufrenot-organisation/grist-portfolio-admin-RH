@@ -1,4 +1,4 @@
-const VERSION="2.2";
+const VERSION="2.3";
 const T={team:"Team",teams:"Team_ref",motifs:"Motifs_RH",alerts:"Parametres_Alertes"};
 const S={team:[],teams:[],motifs:[],alerts:[],editing:null,available:[],errors:{}};
 
@@ -16,21 +16,61 @@ function setDiagnostic(messages, isError=false){
   body.innerHTML="<ul>"+messages.map(m=>`<li>${esc(m)}</li>`).join("")+"</ul>";
 }
 
+function normalizeRecords(raw, tableId){
+  // Format 1 : tableau de lignes [{id:1, ...}, ...]
+  if(Array.isArray(raw)){
+    return raw;
+  }
+
+  // Format 2 : objet colonne-par-colonne :
+  // {id:[1,2], nom:["A","B"], actif:[true,false], ...}
+  if(raw && typeof raw === "object"){
+    // Certaines versions/wrappers peuvent encapsuler les colonnes.
+    const candidate =
+      (raw.columns && typeof raw.columns === "object" ? raw.columns : null) ||
+      (raw.data && typeof raw.data === "object" && !Array.isArray(raw.data) ? raw.data : null) ||
+      raw;
+
+    const keys=Object.keys(candidate).filter(k=>Array.isArray(candidate[k]));
+    if(keys.length){
+      const length=Math.max(...keys.map(k=>candidate[k].length));
+      const records=[];
+      for(let i=0;i<length;i++){
+        const rec={};
+        for(const key of keys){
+          rec[key]=candidate[key][i];
+        }
+        // Grist doit normalement fournir id. On le conserve tel quel.
+        records.push(rec);
+      }
+      return records;
+    }
+
+    // Format éventuel : {records:[...]}
+    if(Array.isArray(raw.records)){
+      return raw.records;
+    }
+  }
+
+  throw new Error(
+    `Format de données non reconnu pour ${tableId}. Type=${typeof raw}; clés=`+
+    (raw && typeof raw==="object" ? Object.keys(raw).slice(0,20).join(",") : "aucune")
+  );
+}
+
 async function safeFetch(tableId){
   if(!S.available.includes(tableId)){
     S.errors[tableId]=`Table absente : ${tableId}`;
     return [];
   }
   try{
-    const rows=await grist.docApi.fetchTable(tableId);
-    if(!Array.isArray(rows)){
-      S.errors[tableId]=`Format inattendu retourné par ${tableId}`;
-      return [];
-    }
+    const raw=await grist.docApi.fetchTable(tableId);
+    const rows=normalizeRecords(raw,tableId);
+    console.info(`[RH Admin] ${tableId}:`, rows.length, "ligne(s)", rows.slice(0,2));
     return rows;
   }catch(e){
     S.errors[tableId]=`${tableId} : ${e?.message||String(e)}`;
-    console.error("fetchTable",tableId,e);
+    console.error("fetchTable/normalize",tableId,e);
     return [];
   }
 }
@@ -54,6 +94,7 @@ async function load(){
   S.team=team; S.teams=teams; S.motifs=motifs; S.alerts=alerts;
 
   const messages=[];
+  messages.push(`Tables visibles par le widget : ${S.available.join(", ") || "aucune"}`);
   if(S.errors[T.team]) messages.push(S.errors[T.team]);
   else messages.push(`Team : ${S.team.length} ressource(s) chargée(s).`);
   if(S.errors[T.teams]) messages.push(S.errors[T.teams]);
