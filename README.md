@@ -1,10 +1,19 @@
-# RH / PMO — Administration V2.1
+# RH / PMO Administration V2.2
 
-Correctifs V2.1 :
-- correction d'une erreur JavaScript qui bloquait tout le widget ;
-- navigation gauche opérationnelle ;
-- chargement contrôlé de `Team`, `Team_ref`, `Motifs_RH`, `Parametres_Alertes` ;
-- diagnostic explicite si une table est absente ou vide ;
-- affichage du nombre de ressources et d'équipes dans l'état de synchronisation.
+Corrections principales :
+- navigation du menu initialisée indépendamment du chargement Grist ;
+- chargement indépendant de chaque table ;
+- `Team` et `Team_ref` restent utilisables même si les tables RH ne sont pas encore migrées ;
+- diagnostic visible des tables absentes et erreurs d'accès ;
+- version affichée dans le pied du menu (`V2.2`).
 
-Important : dans le fichier `.grist` de structure transmis pour la conception, `Team` et `Team_ref` avaient 0 ligne. Le widget affiche les données présentes dans le document Grist dans lequel il est installé ; il ne crée pas automatiquement ces données.
+Tables attendues :
+- Team
+- Team_ref
+- Motifs_RH
+- Parametres_Alertes
+
+Le widget demande `Full document access`.
+
+Si `Motifs_RH` ou `Parametres_Alertes` sont absentes, les onglets correspondants affichent un message,
+mais l'administration des ressources Team continue de fonctionner.
