@@ -19,3 +19,27 @@ svg{width:100%;height:300px;display:block}.gridline{stroke:#e5ebf0}.axis{fill:#7
 .diagnostic ul{margin:7px 0 0 18px;padding:0}.diagnostic li{margin:3px 0}
 
 .diag-count{font-size:11px;color:#fbbf24;font-weight:800;margin-left:4px}
+
+
+/* Bulles d'aide des seuils */
+.alert-name{display:flex;align-items:center;gap:7px;min-width:230px}
+.help-wrap{position:relative;display:inline-flex;align-items:center}
+.help-dot{
+  width:18px;height:18px;border-radius:50%;
+  border:1px solid #9bc9c5;background:#eaf8f7;color:#0f7f79;
+  display:grid;place-items:center;padding:0;font-size:11px;font-weight:900;line-height:1;
+}
+.help-dot:hover,.help-dot:focus{background:#d5f1ef;outline:none}
+.help-popover{
+  display:none;position:absolute;z-index:50;left:24px;top:-8px;
+  width:min(390px,70vw);padding:12px 13px;border-radius:10px;
+  background:#102a43;color:#fff;box-shadow:0 10px 30px rgba(16,42,67,.22);
+  font-size:11px;line-height:1.45;text-transform:none;letter-spacing:0;
+}
+.help-popover strong{display:block;margin-bottom:7px;font-size:12px}
+.help-popover span{display:block;margin-top:6px;color:#dce8f0}
+.help-popover b{color:#fff}
+.help-wrap:hover .help-popover,.help-wrap:focus-within .help-popover{display:block}
+@media(max-width:700px){
+  .help-popover{position:fixed;left:16px;right:16px;top:auto;bottom:16px;width:auto}
+}

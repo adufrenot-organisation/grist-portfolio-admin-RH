@@ -9,3 +9,13 @@ Version production avec diagnostic séparé.
 - Journal des erreurs de la session avec heure et action.
 - Boutons Actualiser et Effacer le journal.
 - Un compteur discret apparaît à côté de Diagnostic uniquement lorsqu'une erreur a été journalisée.
+
+
+## Bulles explicatives des seuils
+L'écran `Seuils` affiche désormais un bouton `i` à côté de chaque règle.
+Les bulles expliquent :
+- ce que mesure l'indicateur ;
+- les motifs pris en compte ;
+- la formule ;
+- le sens des seuils Orange/Rouge.
+Les explications sont définies par `Code_Alerte` et ne modifient aucune donnée Grist.

@@ -166,6 +166,62 @@ async function saveResource(){
   reset(); toast("Ressource enregistrée"); await load();
 }
 
+
+const ALERT_HELP={
+  ABS_IND:{
+    title:"Absence prévisionnelle individuelle",
+    text:"Mesure, pour chaque ressource, le cumul d'absence prévu sur la fenêtre configurée. A = 1 jour ; 1/2 M et 1/2 AM = 0,5 jour. Orange à partir du seuil Orange, Rouge à partir du seuil Rouge.",
+    formula:"Somme des Absence_Equivalent par ressource sur les X prochains jours.",
+    sense:"Plus la valeur monte, plus le niveau d'alerte est élevé."
+  },
+  ABS_EQ:{
+    title:"Taux d'absence prévisionnel équipe",
+    text:"Mesure la part de capacité de l'équipe prévue en absence sur la fenêtre configurée. Les week-ends et jours fériés ne doivent pas entrer dans la capacité travaillable.",
+    formula:"Jours-ressources d'absence ÷ jours-ressources travaillables × 100.",
+    sense:"Plus le pourcentage monte, plus le niveau d'alerte est élevé."
+  },
+  CAP_MIN:{
+    title:"Capacité disponible minimale",
+    text:"Mesure la capacité de travail restante pour une journée, après prise en compte des absences. P, TL, TE/TLE et FO restent de la capacité disponible selon leur coefficient de présence.",
+    formula:"Présence équivalente disponible ÷ capacité travaillable × 100.",
+    sense:"Ici le sens est inversé : Orange si la capacité descend sous le seuil Orange, Rouge si elle descend sous le seuil Rouge."
+  },
+  PRES_PHY:{
+    title:"Présence physique minimale",
+    text:"Compte les ressources physiquement présentes sur site. Seul le motif P est considéré comme présence physique. TL, TE/TLE et FO peuvent rester de la capacité disponible mais ne comptent pas comme présence sur site.",
+    formula:"Nombre de ressources avec motif P pour la journée.",
+    sense:"Sens inversé : plus le nombre descend, plus l'alerte est forte."
+  },
+  ABS_CONS:{
+    title:"Absence consécutive individuelle",
+    text:"Repère les séries continues de jours d'absence d'une même ressource sur la fenêtre configurée.",
+    formula:"Nombre maximal de jours consécutifs comportant une absence pour la ressource.",
+    sense:"Orange à partir du seuil Orange, Rouge à partir du seuil Rouge."
+  },
+  TL_SIM:{
+    title:"Télétravail simultané",
+    text:"Mesure la proportion de ressources en télétravail le même jour. Les motifs TL, TE et TLE sont comptés comme télétravail. Cet indicateur aide à anticiper une faible présence physique, même si la capacité de travail reste disponible.",
+    formula:"Ressources en TL/TE/TLE ÷ ressources actives de l'équipe × 100.",
+    sense:"Plus le pourcentage monte, plus le niveau d'alerte est élevé."
+  },
+  FO_SIM:{
+    title:"Formation simultanée",
+    text:"Mesure la proportion de ressources en formation le même jour. La formation est considérée comme temps travaillé, mais plusieurs formations simultanées peuvent réduire la capacité opérationnelle disponible pour l'activité courante.",
+    formula:"Ressources en FO ÷ ressources actives de l'équipe × 100.",
+    sense:"Plus le pourcentage monte, plus le niveau d'alerte est élevé."
+  }
+};
+
+function alertHelpHtml(code){
+  const h=ALERT_HELP[code];
+  if(!h)return "";
+  const content=`<strong>${esc(h.title)}</strong><span>${esc(h.text)}</span><span><b>Formule :</b> ${esc(h.formula)}</span><span><b>Lecture :</b> ${esc(h.sense)}</span>`;
+  return `<span class="help-wrap">
+    <button type="button" class="help-dot" aria-label="Explication ${esc(h.title)}">i</button>
+    <span class="help-popover" role="tooltip">${content}</span>
+  </span>`;
+}
+
 function thresholds(){
   const tbody=$("alertRows"); if(!tbody)return;
   if(S.errors[T.alerts]){
@@ -174,7 +230,7 @@ function thresholds(){
   }
   tbody.innerHTML=S.alerts.length ? S.alerts.map(r=>`<tr data-id="${r.id}">
     <td><input class="act" type="checkbox" ${r.Actif?"checked":""}></td>
-    <td><strong>${esc(r.Libelle||"")}</strong><br><small>${esc(r.Code_Alerte||"")}</small></td>
+    <td><div class="alert-name"><strong>${esc(r.Libelle||"")}</strong>${alertHelpHtml(r.Code_Alerte)}</div><small>${esc(r.Code_Alerte||"")}</small></td>
     <td><input class="win" type="number" value="${num(r.Fenetre_Jours)}"></td>
     <td><input class="orange" type="number" step="0.1" value="${num(r.Seuil_Orange)}"></td>
     <td><input class="red" type="number" step="0.1" value="${num(r.Seuil_Rouge)}"></td>
