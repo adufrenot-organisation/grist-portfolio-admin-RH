@@ -19,3 +19,7 @@ Les bulles expliquent :
 - la formule ;
 - le sens des seuils Orange/Rouge.
 Les explications sont définies par `Code_Alerte` et ne modifient aucune donnée Grist.
+
+
+## v2.5 — Présence v2
+Intégration du heartbeat partagé `SESSIONS_UTILISATEURS` avec module `Admin RH` et contexte selon l'écran actif.

@@ -1,6 +1,6 @@
-const VERSION="2.4";
+const VERSION="2.5";
 const T={team:"Team",teams:"Team_ref",motifs:"Motifs_RH",alerts:"Parametres_Alertes"};
-const S={team:[],teams:[],motifs:[],alerts:[],editing:null,available:[],errors:{},log:[]};
+const S={team:[],teams:[],motifs:[],alerts:[],editing:null,available:[],errors:{},log:[],currentView:"ressources"};
 
 const $=id=>document.getElementById(id);
 const esc=(s="")=>String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
@@ -313,7 +313,7 @@ function nav(){
     document.querySelectorAll(".nav-item").forEach(x=>x.classList.remove("active"));
     b.classList.add("active");
     document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));
-    const target=b.dataset.view==="diagnostic"?$("diagnosticView"):$(b.dataset.view);
+    S.currentView=b.dataset.view; const target=b.dataset.view==="diagnostic"?$("diagnosticView"):$(b.dataset.view); window.PmoPresence?.touch?.();
     if(target)target.classList.add("active");
     const t={
       ressources:["Ressources","Référentiel Team partagé avec le PMO"],
@@ -329,6 +329,12 @@ function nav(){
   }));
 }
 
+
+function presenceContext(){
+  const labels={ressources:"Ressources",seuils:"Seuils",motifs:"Motifs RH",equipes:"Équipes",diagnostic:"Diagnostic"};
+  return {module:"Admin RH",context:labels[S.currentView]||"Administration RH",contextId:""};
+}
+
 function init(){
   nav();
   $("refresh").addEventListener("click",load);
@@ -338,6 +344,7 @@ function init(){
   $("diagRefresh").addEventListener("click",load);
   $("diagClear").addEventListener("click",clearLog);
   grist.ready({requiredAccess:"full"});
+  window.PmoPresence?.start({widget:"ADMIN_RH",version:VERSION,getContext:presenceContext});
   load();
 }
 init();
