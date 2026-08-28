@@ -23,3 +23,20 @@ Les explications sont définies par `Code_Alerte` et ne modifient aucune donnée
 
 ## v2.5 — Présence v2
 Intégration du heartbeat partagé `SESSIONS_UTILISATEURS` avec module `Admin RH` et contexte selon l'écran actif.
+
+
+## v2.6 — Sécurité applicative du module Admin RH
+
+Le module est maintenant protégé dès l'ouverture :
+
+- Owner Grist du document : accès automatique.
+- Sinon : `user.Email -> Team -> profil/role -> DROITS_MODULES`.
+- Code module : `ADMIN_RH`.
+- En cas de refus, aucune donnée métier n'est chargée ; une page verrouillée explique le motif.
+- `access.js` v1.1.0 utilise `/access` pour identifier le rôle Owner, avec fallback `/usersForViewAs`.
+
+Les ACL Grist restent la sécurité effective des tables.
+
+
+## v2.7 — Page de blocage simplifiée
+`access.js` v1.2.0 affiche désormais un refus générique sans information sur le profil, les règles internes ou la raison technique.

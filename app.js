@@ -1,4 +1,4 @@
-const VERSION="2.5";
+const VERSION="2.7";
 const T={team:"Team",teams:"Team_ref",motifs:"Motifs_RH",alerts:"Parametres_Alertes"};
 const S={team:[],teams:[],motifs:[],alerts:[],editing:null,available:[],errors:{},log:[],currentView:"ressources"};
 
@@ -335,7 +335,7 @@ function presenceContext(){
   return {module:"Admin RH",context:labels[S.currentView]||"Administration RH",contextId:""};
 }
 
-function init(){
+function wireUI(){
   nav();
   $("refresh").addEventListener("click",load);
   $("newResource").addEventListener("click",reset);
@@ -343,8 +343,14 @@ function init(){
   $("saveResource").addEventListener("click",()=>saveResource().catch(e=>{logError("Enregistrement ressource",e?.message||String(e));toast(e?.message||String(e));}));
   $("diagRefresh").addEventListener("click",load);
   $("diagClear").addEventListener("click",clearLog);
-  grist.ready({requiredAccess:"full"});
-  window.PmoPresence?.start({widget:"ADMIN_RH",version:VERSION,getContext:presenceContext});
-  load();
 }
-init();
+
+grist.ready({requiredAccess:"full"});
+async function bootAdminRH(){
+  const allowed=await window.PmoAccess?.guard({module:"ADMIN_RH",label:"Administration RH"});
+  if(!allowed)return;
+  wireUI();
+  window.PmoPresence?.start({widget:"ADMIN_RH",version:VERSION,getContext:presenceContext});
+  await load();
+}
+bootAdminRH().catch(e=>{console.error(e);window.PmoAccess?.guard({module:"ADMIN_RH",label:"Administration RH"});});
