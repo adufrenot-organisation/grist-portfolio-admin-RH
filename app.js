@@ -1,4 +1,4 @@
-const VERSION="2.7";
+const VERSION="2.8";
 const T={team:"Team",teams:"Team_ref",motifs:"Motifs_RH",alerts:"Parametres_Alertes"};
 const S={team:[],teams:[],motifs:[],alerts:[],editing:null,available:[],errors:{},log:[],currentView:"ressources"};
 
@@ -222,35 +222,85 @@ function alertHelpHtml(code){
   </span>`;
 }
 
+
+const ALERT_RECOMMENDED={
+  ABS_IND:{window:30,orange:5,red:10,unit:"jours",sens:"MAX"},
+  ABS_EQ:{window:7,orange:20,red:30,unit:"%",sens:"MAX"},
+  CAP_MIN:{window:1,orange:70,red:50,unit:"%",sens:"MIN"},
+  PRES_PHY:{window:1,orange:50,red:35,unit:"%",sens:"MIN"},
+  ABS_CONS:{window:30,orange:5,red:10,unit:"jours",sens:"MAX"},
+  TL_SIM:{window:1,orange:50,red:65,unit:"%",sens:"MAX"},
+  FO_SIM:{window:1,orange:20,red:35,unit:"%",sens:"MAX"}
+};
+async function applyRecommendedThresholds(){
+  const rows=S.alerts.map(r=>{
+    const x=ALERT_RECOMMENDED[r.Code_Alerte];
+    return x?{id:r.id,fields:{
+      Actif:true,
+      Fenetre_Jours:x.window,
+      Seuil_Orange:x.orange,
+      Seuil_Rouge:x.red,
+      Unite:x.unit,
+      Sens:x.sens
+    }}:null
+  }).filter(Boolean);
+  if(!rows.length)return toast("Aucun seuil RH reconnu");
+  if(!window.confirm("Appliquer le profil recommandé à tous les seuils RH ?"))return;
+  try{
+    await grist.getTable(T.alerts).update(rows);
+    toast("Seuils recommandés appliqués");
+    await load();
+  }catch(e){
+    logError("Application seuils recommandés",e?.message||String(e));
+    toast(e?.message||String(e));
+  }
+}
 function thresholds(){
   const tbody=$("alertRows"); if(!tbody)return;
   if(S.errors[T.alerts]){
     tbody.innerHTML=`<tr><td colspan="7" class="empty">${esc(S.errors[T.alerts])}. Applique d'abord la migration RH.</td></tr>`;
     return;
   }
-  tbody.innerHTML=S.alerts.length ? S.alerts.map(r=>`<tr data-id="${r.id}">
-    <td><input class="act" type="checkbox" ${r.Actif?"checked":""}></td>
-    <td><div class="alert-name"><strong>${esc(r.Libelle||"")}</strong>${alertHelpHtml(r.Code_Alerte)}</div><small>${esc(r.Code_Alerte||"")}</small></td>
-    <td><input class="win" type="number" value="${num(r.Fenetre_Jours)}"></td>
-    <td><input class="orange" type="number" step="0.1" value="${num(r.Seuil_Orange)}"></td>
-    <td><input class="red" type="number" step="0.1" value="${num(r.Seuil_Rouge)}"></td>
-    <td>${esc(r.Unite||"")}</td>
-    <td><button class="btn secondary save-alert">Sauver</button></td>
-  </tr>`).join("") : '<tr><td colspan="7" class="empty">La table Parametres_Alertes est vide.</td></tr>';
+  tbody.innerHTML=S.alerts.length ? S.alerts.map(r=>{
+    const rec=ALERT_RECOMMENDED[r.Code_Alerte];
+    const legacyPhysical=r.Code_Alerte==="PRES_PHY" && String(r.Unite||"").trim()!=="%";
+    const orange=legacyPhysical?50:num(r.Seuil_Orange);
+    const red=legacyPhysical?35:num(r.Seuil_Rouge);
+    const unit=legacyPhysical?"%":String(r.Unite||rec?.unit||"");
+    return `<tr data-id="${r.id}">
+      <td><input class="act" type="checkbox" ${r.Actif?"checked":""}></td>
+      <td><div class="alert-name"><strong>${esc(r.Libelle||"")}</strong>${alertHelpHtml(r.Code_Alerte)}</div><small>${esc(r.Code_Alerte||"")}</small></td>
+      <td><input class="win" type="number" min="1" value="${num(r.Fenetre_Jours)}"></td>
+      <td><input class="orange" type="number" step="0.1" value="${orange}"></td>
+      <td><input class="red" type="number" step="0.1" value="${red}"></td>
+      <td><select class="unit">
+        <option value="%" ${unit==="%"?"selected":""}>%</option>
+        <option value="jours" ${unit==="jours"?"selected":""}>jours</option>
+        <option value="personnes" ${unit==="personnes"?"selected":""}>personnes</option>
+      </select></td>
+      <td><button class="btn secondary save-alert">Sauver</button></td>
+    </tr>`
+  }).join("") : '<tr><td colspan="7" class="empty">La table Parametres_Alertes est vide.</td></tr>';
+
   tbody.querySelectorAll(".save-alert").forEach(b=>b.addEventListener("click",async()=>{
-    const tr=b.closest("tr");
+    const tr=b.closest("tr"),id=Number(tr.dataset.id),row=S.alerts.find(x=>x.id===id);
     try{
-      await grist.getTable(T.alerts).update({id:Number(tr.dataset.id),fields:{
+      const fields={
         Actif:tr.querySelector(".act").checked,
         Fenetre_Jours:num(tr.querySelector(".win").value),
         Seuil_Orange:num(tr.querySelector(".orange").value),
-        Seuil_Rouge:num(tr.querySelector(".red").value)
-      }});
+        Seuil_Rouge:num(tr.querySelector(".red").value),
+        Unite:tr.querySelector(".unit").value
+      };
+      if(row?.Code_Alerte==="PRES_PHY"){
+        fields.Unite="%";
+        fields.Sens="MIN";
+      }
+      await grist.getTable(T.alerts).update({id,fields});
       toast("Seuil enregistré"); await load();
     }catch(e){logError("Enregistrement seuil",e?.message||String(e));toast(e?.message||String(e));}
   }));
 }
-
 function motifs(){
   const tbody=$("motifRows"); if(!tbody)return;
   if(S.errors[T.motifs]){
@@ -338,6 +388,7 @@ function presenceContext(){
 function wireUI(){
   nav();
   $("refresh").addEventListener("click",load);
+  if($("applyRecommended"))$("applyRecommended").addEventListener("click",()=>applyRecommendedThresholds());
   $("newResource").addEventListener("click",reset);
   $("resetResource").addEventListener("click",reset);
   $("saveResource").addEventListener("click",()=>saveResource().catch(e=>{logError("Enregistrement ressource",e?.message||String(e));toast(e?.message||String(e));}));

@@ -40,3 +40,14 @@ Les ACL Grist restent la sécurité effective des tables.
 
 ## v2.7 — Page de blocage simplifiée
 `access.js` v1.2.0 affiche désormais un refus générique sans information sur le profil, les règles internes ou la raison technique.
+
+
+## V2.8 — reprise depuis la dernière version utilisateur
+Cette version repart du ZIP Admin RH fourni (v2.7) et conserve ses fonctions de diagnostic, contrôle d'accès, présence et infobulles.
+
+Ajouts :
+- bouton `Appliquer les seuils recommandés` ;
+- profil recommandé : ABS_IND 5/10 j, ABS_EQ 20/30 %, CAP_MIN 70/50 %, PRES_PHY 50/35 %, ABS_CONS 5/10 j, TL_SIM 50/65 %, FO_SIM 20/35 % ;
+- PRES_PHY migré vers `%` de l'effectif actif ;
+- unité modifiable par ligne ;
+- version `Administration RH · V2.8` visible dans la barre latérale.
