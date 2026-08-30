@@ -51,3 +51,11 @@ Ajouts :
 - PRES_PHY migré vers `%` de l'effectif actif ;
 - unité modifiable par ligne ;
 - version `Administration RH · V2.8` visible dans la barre latérale.
+
+
+## V2.9 — seuil annuel d'absence
+- ajout du paramètre `ABS_ANNUEL` dans les seuils RH ;
+- recommandation : Orange 50 jours, Rouge 55 jours, sens MAX ;
+- bouton `Créer / vérifier ABS_ANNUEL` pour ajouter automatiquement la ligne dans `Parametres_Alertes` si elle n'existe pas ;
+- `Appliquer les seuils recommandés` crée également le paramètre manquant avant d'appliquer le profil ;
+- aide détaillée sur le calcul annuel réalisé 🔒 + prévu 🔓.

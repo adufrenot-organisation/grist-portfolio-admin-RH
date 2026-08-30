@@ -388,6 +388,13 @@ function presenceContext(){
 function wireUI(){
   nav();
   $("refresh").addEventListener("click",load);
+  if($("ensureAnnualThreshold"))$("ensureAnnualThreshold").addEventListener("click",async()=>{
+    try{
+      const r=await ensureAnnualAbsenceThreshold();
+      toast(r===true?"Seuil ABS_ANNUEL créé":"Seuil ABS_ANNUEL déjà présent");
+      await load();
+    }catch(e){logError("Création ABS_ANNUEL",e?.message||String(e));toast(e?.message||String(e))}
+  });
   if($("applyRecommended"))$("applyRecommended").addEventListener("click",()=>applyRecommendedThresholds());
   $("newResource").addEventListener("click",reset);
   $("resetResource").addEventListener("click",reset);
