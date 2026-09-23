@@ -1,6 +1,6 @@
-const VERSION="2.9";
-const T={team:"Team",teams:"Team_ref",motifs:"Motifs_RH",alerts:"Parametres_Alertes"};
-const S={team:[],teams:[],motifs:[],alerts:[],editing:null,available:[],errors:{},log:[],currentView:"ressources"};
+const VERSION="3.0";
+const T={team:"Team",teams:"Team_ref",motifs:"Motifs_RH",alerts:"Parametres_Alertes",managers:"Managers_Equipes"};
+const S={team:[],teams:[],motifs:[],alerts:[],managers:[],editing:null,editingManager:null,available:[],errors:{},log:[],currentView:"ressources"};
 
 const $=id=>document.getElementById(id);
 const esc=(s="")=>String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
@@ -85,10 +85,10 @@ async function load(){
   }
 
   // Les quatre tables sont chargées indépendamment. Une table RH absente ne bloque plus Team.
-  const [team,teams,motifs,alerts]=await Promise.all([
-    safeFetch(T.team), safeFetch(T.teams), safeFetch(T.motifs), safeFetch(T.alerts)
+  const [team,teams,motifs,alerts,managers]=await Promise.all([
+    safeFetch(T.team), safeFetch(T.teams), safeFetch(T.motifs), safeFetch(T.alerts), safeFetch(T.managers)
   ]);
-  S.team=team; S.teams=teams; S.motifs=motifs; S.alerts=alerts;
+  S.team=team; S.teams=teams; S.motifs=motifs; S.alerts=alerts; S.managers=managers;
 
   $("sync").textContent=`V${VERSION} · Team ${S.team.length} · Équipes ${S.teams.length}`;
   render();
@@ -99,6 +99,7 @@ function render(){
   thresholds();
   motifs();
   teams();
+  managers();
   renderDiagnostic();
 }
 
@@ -368,11 +369,106 @@ function teams(){
     : `<tr><td colspan="3" class="empty">${S.errors[T.teams] ? esc(S.errors[T.teams]) : "La table Team_ref est présente mais vide."}</td></tr>`;
 }
 
+
+function refId(v){
+  if(typeof v==="number"&&Number.isFinite(v))return v;
+  if(Array.isArray(v)&&Number.isFinite(Number(v[1])))return Number(v[1]);
+  if(v&&typeof v==="object"){
+    for(const k of ["id","rowId","recordId"])if(Number.isFinite(Number(v[k])))return Number(v[k]);
+  }
+  const n=Number(v); return Number.isFinite(n)?n:0;
+}
+function resourceName(id){
+  const r=S.team.find(x=>x.id===refId(id));
+  return r?.nom||r?.Nom||r?.name||r?.Name||"—";
+}
+function resourceEmail(r){return String(r?.email??r?.Email??"").trim()}
+function resourceProfil(r){return String(r?.Profil??"").trim().toUpperCase()}
+
+function managers(){
+  const tbody=$("managerRows"), teamSel=$("mgrEquipe"), managerSel=$("mgrManager");
+  if(!tbody||!teamSel||!managerSel)return;
+
+  teamSel.innerHTML='<option value="0">— Choisir une équipe —</option>'+
+    S.teams.slice().sort((a,b)=>String(a.Libelle||a.Code||"").localeCompare(String(b.Libelle||b.Code||"")))
+      .map(t=>`<option value="${t.id}">${esc(t.Libelle||t.Code||`Équipe ${t.id}`)}</option>`).join("");
+
+  const eligible=S.team.filter(r=>{
+    const p=resourceProfil(r);
+    const active=r.actif??r.Actif??true;
+    return active && (p==="MANAGER"||p==="PMO"||p==="ADMIN");
+  }).sort((a,b)=>resourceName(a.id).localeCompare(resourceName(b.id)));
+  managerSel.innerHTML='<option value="0">— Choisir un manager —</option>'+
+    eligible.map(r=>`<option value="${r.id}">${esc(resourceName(r.id))} · ${esc(resourceProfil(r)||"Profil non défini")}</option>`).join("");
+
+  const setup=$("managerSetup"), content=$("managerContent");
+  const missing=!S.available.includes(T.managers);
+  if(setup)setup.hidden=!missing;
+  if(content)content.hidden=missing;
+  if(missing){
+    tbody.innerHTML="";
+    return;
+  }
+
+  tbody.innerHTML=S.managers.length ? S.managers.map(r=>`<tr class="clickable" data-id="${r.id}">
+    <td>${r.Actif?"Oui":"Non"}</td>
+    <td>${esc(teamName(refId(r.Equipe)))}</td>
+    <td>${esc(resourceName(refId(r.Manager)))}</td>
+    <td>${esc(r.Manager_Email||"")}</td>
+    <td>${esc(r.Commentaire||"")}</td>
+  </tr>`).join("") : '<tr><td colspan="5" class="empty">Aucune affectation manager / équipe.</td></tr>';
+  tbody.querySelectorAll("tr[data-id]").forEach(tr=>tr.addEventListener("click",()=>editManager(Number(tr.dataset.id))));
+}
+
+function resetManager(){
+  S.editingManager=null;
+  if($("managerFormTitle"))$("managerFormTitle").textContent="Nouvelle affectation";
+  $("mgrEquipe").value="0"; $("mgrManager").value="0"; $("mgrComment").value=""; $("mgrActif").checked=true;
+}
+function editManager(id){
+  const r=S.managers.find(x=>x.id===id); if(!r)return;
+  S.editingManager=id;
+  $("managerFormTitle").textContent="Modifier l’affectation";
+  $("mgrEquipe").value=refId(r.Equipe)||0;
+  $("mgrManager").value=refId(r.Manager)||0;
+  $("mgrComment").value=r.Commentaire||"";
+  $("mgrActif").checked=!!r.Actif;
+}
+async function saveManager(){
+  if(!S.available.includes(T.managers))return toast("La table Managers_Equipes doit d’abord être créée.");
+  const equipe=Number($("mgrEquipe").value||0), manager=Number($("mgrManager").value||0);
+  if(!equipe||!manager)return toast("Équipe et manager obligatoires.");
+  const person=S.team.find(r=>r.id===manager);
+  const profil=resourceProfil(person);
+  if(!["MANAGER","PMO","ADMIN"].includes(profil))return toast("Le Profil doit être MANAGER, PMO ou ADMIN.");
+  const duplicate=S.managers.find(r=>r.id!==S.editingManager && refId(r.Equipe)===equipe && refId(r.Manager)===manager && !!r.Actif);
+  if(duplicate && $("mgrActif").checked)return toast("Cette affectation active existe déjà.");
+  const fields={Equipe:equipe,Manager:manager,Manager_Email:resourceEmail(person),Actif:$("mgrActif").checked,Commentaire:$("mgrComment").value.trim()};
+  const table=grist.getTable(T.managers);
+  if(S.editingManager)await table.update({id:S.editingManager,fields});
+  else await table.create({fields});
+  resetManager(); toast("Affectation enregistrée"); await load();
+}
+async function createManagersTable(){
+  if(S.available.includes(T.managers))return toast("La table Managers_Equipes existe déjà.");
+  try{
+    await grist.docApi.applyUserActions([["AddTable",T.managers,[
+      {id:"Equipe",type:"Ref:Team_ref"},
+      {id:"Manager",type:"Ref:Team"},
+      {id:"Manager_Email",type:"Text"},
+      {id:"Actif",type:"Bool"},
+      {id:"Commentaire",type:"Text"}
+    ]]]);
+    toast("Table Managers_Equipes créée");
+    await load();
+  }catch(e){logError("Création Managers_Equipes",e?.message||String(e));toast(e?.message||String(e))}
+}
+
 function renderDiagnostic(){
   const tableBody=$("diagTables"), logBody=$("diagLog"), badge=$("diagBadge");
   if(!tableBody||!logBody)return;
   const defs=[
-    [T.team,S.team],[T.teams,S.teams],[T.motifs,S.motifs],[T.alerts,S.alerts]
+    [T.team,S.team],[T.teams,S.teams],[T.motifs,S.motifs],[T.alerts,S.alerts],[T.managers,S.managers]
   ];
   tableBody.innerHTML=defs.map(([name,rows])=>{
     const err=S.errors[name];
@@ -400,6 +496,7 @@ function nav(){
       seuils:["Seuils","Paramètres des alertes RH"],
       motifs:["Motifs RH","Règles de présence et capacité"],
       equipes:["Équipes","Référentiel Team_ref partagé avec le PMO"],
+      managers:["Managers d’équipes","Affectation des managers aux équipes"],
       diagnostic:["Diagnostic","État technique du widget et erreurs de la session"]
     };
     if(t[b.dataset.view]){
@@ -411,7 +508,7 @@ function nav(){
 
 
 function presenceContext(){
-  const labels={ressources:"Ressources",seuils:"Seuils",motifs:"Motifs RH",equipes:"Équipes",diagnostic:"Diagnostic"};
+  const labels={ressources:"Ressources",seuils:"Seuils",motifs:"Motifs RH",equipes:"Équipes",managers:"Managers d’équipes",diagnostic:"Diagnostic"};
   return {module:"Admin RH",context:labels[S.currentView]||"Administration RH",contextId:""};
 }
 
@@ -429,6 +526,10 @@ function wireUI(){
   $("newResource").addEventListener("click",reset);
   $("resetResource").addEventListener("click",reset);
   $("saveResource").addEventListener("click",()=>saveResource().catch(e=>{logError("Enregistrement ressource",e?.message||String(e));toast(e?.message||String(e));}));
+  if($("newManager"))$("newManager").addEventListener("click",resetManager);
+  if($("resetManager"))$("resetManager").addEventListener("click",resetManager);
+  if($("saveManager"))$("saveManager").addEventListener("click",()=>saveManager().catch(e=>{logError("Enregistrement manager",e?.message||String(e));toast(e?.message||String(e));}));
+  if($("createManagersTable"))$("createManagersTable").addEventListener("click",createManagersTable);
   $("diagRefresh").addEventListener("click",load);
   $("diagClear").addEventListener("click",clearLog);
   if($("newMotif"))$("newMotif").addEventListener("click",openMotifModal);

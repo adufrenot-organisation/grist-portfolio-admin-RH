@@ -66,3 +66,13 @@ Ajouts :
 - Création dans la table Grist `Motifs_RH` avec Code, Libellé, équivalents présence/absence, capacité et état actif.
 - Contrôle d’unicité du code et validation des équivalences entre 0 et 1.
 - Les motifs restent administrés uniquement dans Administration RH ; le Cockpit les consomme dynamiquement.
+
+
+## V3.0 — Managers d'équipes
+- Nouvel onglet Admin RH « Managers d’équipes ».
+- Administration de la table `Managers_Equipes`.
+- Création de la table depuis l’interface si elle est absente.
+- Affectation équipe (`Team_ref`) ↔ manager (`Team`).
+- Sélection des managers basée uniquement sur `Team.Profil` : `MANAGER`, `PMO` ou `ADMIN`.
+- Activation/désactivation et commentaire d’affectation.
+- `Manager_Email` est alimenté automatiquement depuis `Team`.

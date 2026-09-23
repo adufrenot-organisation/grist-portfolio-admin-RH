@@ -1,5 +1,5 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Administration RH / PMO · v2.9</title><link rel="stylesheet" href="styles.css"><script src="https://docs.getgrist.com/grist-plugin-api.js"></script></head><body><div id="app">
-<aside class="sidebar"><div class="brand"><div class="mark">⚙</div><div><strong>RH / PMO</strong><small>Administration</small></div></div><nav><button class="nav-item active" data-view="ressources">Ressources</button><button class="nav-item" data-view="seuils">Seuils</button><button class="nav-item" data-view="motifs">Motifs RH</button><button class="nav-item" data-view="equipes">Équipes</button><button class="nav-item" data-view="diagnostic">Diagnostic <span id="diagBadge"></span></button></nav><div class="sidebar-footer"><div class="sync" id="sync">Connexion…</div><div class="app-version">Administration RH · V2.9</div></div></aside>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Administration RH / PMO · v3.0</title><link rel="stylesheet" href="styles.css"><script src="https://docs.getgrist.com/grist-plugin-api.js"></script></head><body><div id="app">
+<aside class="sidebar"><div class="brand"><div class="mark">⚙</div><div><strong>RH / PMO</strong><small>Administration</small></div></div><nav><button class="nav-item active" data-view="ressources">Ressources</button><button class="nav-item" data-view="seuils">Seuils</button><button class="nav-item" data-view="motifs">Motifs RH</button><button class="nav-item" data-view="equipes">Équipes</button><button class="nav-item" data-view="managers">Managers d’équipes</button><button class="nav-item" data-view="diagnostic">Diagnostic <span id="diagBadge"></span></button></nav><div class="sidebar-footer"><div class="sync" id="sync">Connexion…</div><div class="app-version">Administration RH · V3.0</div></div></aside>
 <main class="main"><header class="topbar"><div><h1 id="title">Ressources</h1><p id="subtitle">Référentiel Team partagé avec le PMO</p></div><button class="btn secondary" id="refresh">Actualiser</button></header>
 
 <section class="view active" id="ressources"><div class="grid2"><div class="card"><div class="section"><div><h2>Team</h2><p>Référentiel unique PMO + RH</p></div><button class="btn" id="newResource">Nouvelle</button></div><div class="table-wrap"><table><thead><tr><th>Nom</th><th>Équipe</th><th>Rôle</th><th>ETP</th><th>Actif</th></tr></thead><tbody id="resourceRows"></tbody></table></div></div>
@@ -7,6 +7,33 @@
 <section class="view" id="seuils"><div class="card"><div class="section"><div><h2>Paramètres d'alerte</h2><p>Profil conseillé : 2 jours de TL/semaine + ~45 jours de congés/RTT/an</p></div><button class="btn secondary" id="applyRecommended">Appliquer les seuils recommandés</button></div><div class="recommended-note">Les valeurs restent modifiables individuellement après application. <strong>PRES_PHY est désormais exprimé en % de l’effectif actif.</strong></div><div class="table-wrap"><table><thead><tr><th>Actif</th><th>Alerte</th><th>Fenêtre</th><th>Orange</th><th>Rouge</th><th>Unité</th><th></th></tr></thead><tbody id="alertRows"></tbody></table></div></div></section>
 <section class="view" id="motifs"><div class="card"><div class="section"><div><h2>Motifs RH</h2><p>Coefficients et règles de capacité</p></div><button class="btn" id="newMotif">+ Ajouter un motif</button></div><div class="table-wrap"><table><thead><tr><th>Actif</th><th>Code</th><th>Libellé</th><th>Présence</th><th>Absence</th><th>Capacité</th><th></th></tr></thead><tbody id="motifRows"></tbody></table></div></div></section>
 <section class="view" id="equipes"><div class="card"><div class="section"><div><h2>Team_ref</h2><p>Référentiel des équipes PMO</p></div></div><div class="table-wrap"><table><thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead><tbody id="teamRows"></tbody></table></div></div></section>
+
+<section class="view" id="managers">
+  <div class="card" id="managerSetup" hidden>
+    <div class="section"><div><h2>Managers d’équipes</h2><p>La table Managers_Equipes n’existe pas encore.</p></div></div>
+    <div class="recommended-note">Cette table relie une équipe de <strong>Team_ref</strong> à une ressource de <strong>Team</strong>. Les personnes proposées comme manager ont un <strong>Team.Profil</strong> égal à MANAGER, PMO ou ADMIN.</div>
+    <button class="btn" id="createManagersTable">Créer la table Managers_Equipes</button>
+  </div>
+  <div id="managerContent">
+    <div class="grid2">
+      <div class="card">
+        <div class="section"><div><h2>Affectations</h2><p>Un manager peut gérer plusieurs équipes et une équipe peut avoir plusieurs managers.</p></div><button class="btn" id="newManager">Nouvelle</button></div>
+        <div class="table-wrap"><table><thead><tr><th>Actif</th><th>Équipe</th><th>Manager</th><th>Email</th><th>Commentaire</th></tr></thead><tbody id="managerRows"></tbody></table></div>
+      </div>
+      <div class="card">
+        <h2 id="managerFormTitle">Nouvelle affectation</h2>
+        <div class="form">
+          <label>Équipe<select id="mgrEquipe"></select></label>
+          <label>Manager<select id="mgrManager"></select></label>
+          <label class="wide">Commentaire<input id="mgrComment" placeholder="Optionnel"></label>
+          <label class="check"><input id="mgrActif" type="checkbox" checked> Affectation active</label>
+        </div>
+        <div class="actions"><button class="btn" id="saveManager">Enregistrer</button><button class="btn secondary" id="resetManager">Réinitialiser</button></div>
+        <div class="motif-hint">Le rôle fonctionnel est lu uniquement dans <strong>Team.Profil</strong>. Les champs Role/Fonction ne sont pas utilisés pour cette affectation.</div>
+      </div>
+    </div>
+  </div>
+</section>
 <section class="view" id="diagnosticView">
 <div class="card">
   <div class="section"><div><h2>Diagnostic technique</h2><p>État des tables et journal des erreurs du widget</p></div>
