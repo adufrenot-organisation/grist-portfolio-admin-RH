@@ -1,4 +1,4 @@
-const VERSION="2.8";
+const VERSION="2.9";
 const T={team:"Team",teams:"Team_ref",motifs:"Motifs_RH",alerts:"Parametres_Alertes"};
 const S={team:[],teams:[],motifs:[],alerts:[],editing:null,available:[],errors:{},log:[],currentView:"ressources"};
 
@@ -331,6 +331,36 @@ function motifs(){
   }));
 }
 
+function openMotifModal(){
+  if(S.errors[T.motifs])return toast("Impossible d’ajouter un motif : table Motifs_RH indisponible.");
+  $("motifCode").value=""; $("motifLibelle").value="";
+  $("motifPresence").value="0"; $("motifAbsence").value="0";
+  $("motifCapacite").checked=false; $("motifActif").checked=true;
+  $("motifModal").hidden=false;
+  setTimeout(()=>$("motifCode").focus(),0);
+}
+function closeMotifModal(){ $("motifModal").hidden=true; }
+async function createMotif(){
+  if(S.errors[T.motifs])return toast("Impossible d’écrire : table Motifs_RH indisponible.");
+  const code=$("motifCode").value.trim().toUpperCase();
+  const libelle=$("motifLibelle").value.trim();
+  const presence=num($("motifPresence").value);
+  const absence=num($("motifAbsence").value);
+  if(!code)return toast("Code obligatoire");
+  if(!libelle)return toast("Libellé obligatoire");
+  if(!/^[A-Z0-9_\-/]{1,20}$/.test(code))return toast("Code invalide : lettres, chiffres, _, - ou / uniquement.");
+  if(S.motifs.some(m=>String(m.Code||"").trim().toUpperCase()===code))return toast("Ce code motif existe déjà.");
+  if(presence<0||presence>1||absence<0||absence>1)return toast("Les équivalences doivent être comprises entre 0 et 1.");
+  try{
+    await grist.getTable(T.motifs).create({fields:{
+      Actif:$("motifActif").checked, Code:code, Libelle:libelle,
+      Presence_Equivalent:presence, Absence_Equivalent:absence,
+      Compte_Capacite:$("motifCapacite").checked
+    }});
+    closeMotifModal(); toast("Motif RH créé"); await load();
+  }catch(e){logError("Création motif",e?.message||String(e));toast(e?.message||String(e));}
+}
+
 function teams(){
   const tbody=$("teamRows"); if(!tbody)return;
   tbody.innerHTML=S.teams.length
@@ -401,6 +431,11 @@ function wireUI(){
   $("saveResource").addEventListener("click",()=>saveResource().catch(e=>{logError("Enregistrement ressource",e?.message||String(e));toast(e?.message||String(e));}));
   $("diagRefresh").addEventListener("click",load);
   $("diagClear").addEventListener("click",clearLog);
+  if($("newMotif"))$("newMotif").addEventListener("click",openMotifModal);
+  if($("closeMotif"))$("closeMotif").addEventListener("click",closeMotifModal);
+  if($("cancelMotif"))$("cancelMotif").addEventListener("click",closeMotifModal);
+  if($("saveNewMotif"))$("saveNewMotif").addEventListener("click",()=>createMotif());
+  if($("motifModal"))$("motifModal").addEventListener("click",e=>{if(e.target===$("motifModal"))closeMotifModal()});
 }
 
 grist.ready({requiredAccess:"full"});

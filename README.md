@@ -59,3 +59,10 @@ Ajouts :
 - bouton `Créer / vérifier ABS_ANNUEL` pour ajouter automatiquement la ligne dans `Parametres_Alertes` si elle n'existe pas ;
 - `Appliquer les seuils recommandés` crée également le paramètre manquant avant d'appliquer le profil ;
 - aide détaillée sur le calcul annuel réalisé 🔒 + prévu 🔓.
+
+
+## V2.9 — Ajout des motifs RH
+- Ajout d’un bouton « + Ajouter un motif » dans l’onglet Motifs RH.
+- Création dans la table Grist `Motifs_RH` avec Code, Libellé, équivalents présence/absence, capacité et état actif.
+- Contrôle d’unicité du code et validation des équivalences entre 0 et 1.
+- Les motifs restent administrés uniquement dans Administration RH ; le Cockpit les consomme dynamiquement.
