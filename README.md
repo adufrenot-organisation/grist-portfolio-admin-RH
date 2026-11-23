@@ -76,3 +76,11 @@ Ajouts :
 - Sélection des managers basée uniquement sur `Team.Profil` : `MANAGER`, `PMO` ou `ADMIN`.
 - Activation/désactivation et commentaire d’affectation.
 - `Manager_Email` est alimenté automatiquement depuis `Team`.
+
+
+## v3.1 — Paramètres des demandes RH
+- Nouvel onglet **Demandes RH** dans l’Administration.
+- Administration de `PARAM_DEMANDES_RH`.
+- Paramètre `DELAI_AUTO_VALIDATION_SECONDES` partagé avec Cockpit RH V6.58.
+- Valeur acceptée : 0 à 86400 secondes ; défaut Cockpit : 15 secondes.
+- Création de la table depuis l’interface si elle n’existe pas.

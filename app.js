@@ -1,6 +1,6 @@
-const VERSION="3.0";
-const T={team:"Team",teams:"Team_ref",motifs:"Motifs_RH",alerts:"Parametres_Alertes",managers:"Managers_Equipes"};
-const S={team:[],teams:[],motifs:[],alerts:[],managers:[],editing:null,editingManager:null,available:[],errors:{},log:[],currentView:"ressources"};
+const VERSION="3.1";
+const T={team:"Team",teams:"Team_ref",motifs:"Motifs_RH",alerts:"Parametres_Alertes",managers:"Managers_Equipes",requestParams:"PARAM_DEMANDES_RH"};
+const S={team:[],teams:[],motifs:[],alerts:[],managers:[],requestParams:[],editing:null,editingManager:null,available:[],errors:{},log:[],currentView:"ressources"};
 
 const $=id=>document.getElementById(id);
 const esc=(s="")=>String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
@@ -85,10 +85,10 @@ async function load(){
   }
 
   // Les quatre tables sont chargées indépendamment. Une table RH absente ne bloque plus Team.
-  const [team,teams,motifs,alerts,managers]=await Promise.all([
-    safeFetch(T.team), safeFetch(T.teams), safeFetch(T.motifs), safeFetch(T.alerts), safeFetch(T.managers)
+  const [team,teams,motifs,alerts,managers,requestParams]=await Promise.all([
+    safeFetch(T.team), safeFetch(T.teams), safeFetch(T.motifs), safeFetch(T.alerts), safeFetch(T.managers), safeFetch(T.requestParams)
   ]);
-  S.team=team; S.teams=teams; S.motifs=motifs; S.alerts=alerts; S.managers=managers;
+  S.team=team; S.teams=teams; S.motifs=motifs; S.alerts=alerts; S.managers=managers; S.requestParams=requestParams;
 
   $("sync").textContent=`V${VERSION} · Team ${S.team.length} · Équipes ${S.teams.length}`;
   render();
@@ -100,6 +100,7 @@ function render(){
   motifs();
   teams();
   managers();
+  requestParams();
   renderDiagnostic();
 }
 
@@ -484,6 +485,50 @@ function renderDiagnostic(){
   }
 }
 
+
+const AUTO_VALIDATION_DELAY_KEY="DELAI_AUTO_VALIDATION_SECONDES";
+const AUTO_VALIDATION_DEFAULT_SECONDS=15;
+function currentAutoValidationDelay(){
+  const row=(S.requestParams||[]).find(x=>String(x.Cle||"").trim().toUpperCase()===AUTO_VALIDATION_DELAY_KEY&&x.Actif!==false);
+  const n=Number(row?.Valeur);
+  return Number.isFinite(n)?Math.max(0,Math.min(86400,Math.round(n))):AUTO_VALIDATION_DEFAULT_SECONDS;
+}
+function requestParams(){
+  const setup=$("requestParamsSetup"),content=$("requestParamsContent"),input=$("autoValidationDelaySeconds"),state=$("autoValidationParamState");
+  if(!setup||!content)return;
+  const exists=S.available.includes(T.requestParams);
+  setup.hidden=exists; content.hidden=!exists;
+  if(exists){
+    if(input)input.value=String(currentAutoValidationDelay());
+    const row=(S.requestParams||[]).find(x=>String(x.Cle||"").trim().toUpperCase()===AUTO_VALIDATION_DELAY_KEY);
+    if(state)state.textContent=row?`Clé ${AUTO_VALIDATION_DELAY_KEY} active`:`Clé absente : la valeur par défaut ${AUTO_VALIDATION_DEFAULT_SECONDS} s est utilisée.`;
+  }
+}
+async function createRequestParamsTable(){
+  try{
+    if(!S.available.includes(T.requestParams)){
+      await grist.docApi.applyUserActions([["AddTable",T.requestParams,[
+        {id:"Cle",type:"Text"},{id:"Valeur",type:"Text"},{id:"Actif",type:"Bool"},{id:"Commentaire",type:"Text"}
+      ]]]);
+    }
+    await load(); toast("Table PARAM_DEMANDES_RH prête");
+  }catch(e){logError("Création PARAM_DEMANDES_RH",e?.message||String(e));toast(e?.message||String(e))}
+}
+async function saveAutoValidationDelay(){
+  const n=Number($("autoValidationDelaySeconds")?.value);
+  if(!Number.isFinite(n)||n<0||n>86400)return toast("Délai attendu entre 0 et 86400 secondes.");
+  const seconds=Math.round(n);
+  try{
+    if(!S.available.includes(T.requestParams))await createRequestParamsTable();
+    const raw=normalizeRecords(await grist.docApi.fetchTable(T.requestParams),T.requestParams);
+    const row=raw.find(x=>String(x.Cle||"").trim().toUpperCase()===AUTO_VALIDATION_DELAY_KEY);
+    const fields={Cle:AUTO_VALIDATION_DELAY_KEY,Valeur:String(seconds),Actif:true,Commentaire:"Délai avant auto-validation d’une demande EN_ATTENTE (secondes)"};
+    if(row)await grist.getTable(T.requestParams).update({id:row.id,fields});
+    else await grist.getTable(T.requestParams).create({fields});
+    toast(`Délai d’auto-validation enregistré : ${seconds} s`); await load();
+  }catch(e){logError("Enregistrement délai auto-validation",e?.message||String(e));toast(e?.message||String(e))}
+}
+
 function nav(){
   document.querySelectorAll(".nav-item").forEach(b=>b.addEventListener("click",()=>{
     document.querySelectorAll(".nav-item").forEach(x=>x.classList.remove("active"));
@@ -497,6 +542,7 @@ function nav(){
       motifs:["Motifs RH","Règles de présence et capacité"],
       equipes:["Équipes","Référentiel Team_ref partagé avec le PMO"],
       managers:["Managers d’équipes","Affectation des managers aux équipes"],
+      demandes:["Demandes RH","Paramètres de validation des demandes"],
       diagnostic:["Diagnostic","État technique du widget et erreurs de la session"]
     };
     if(t[b.dataset.view]){
@@ -508,7 +554,7 @@ function nav(){
 
 
 function presenceContext(){
-  const labels={ressources:"Ressources",seuils:"Seuils",motifs:"Motifs RH",equipes:"Équipes",managers:"Managers d’équipes",diagnostic:"Diagnostic"};
+  const labels={ressources:"Ressources",seuils:"Seuils",motifs:"Motifs RH",equipes:"Équipes",managers:"Managers d’équipes",demandes:"Demandes RH",diagnostic:"Diagnostic"};
   return {module:"Admin RH",context:labels[S.currentView]||"Administration RH",contextId:""};
 }
 
@@ -530,6 +576,8 @@ function wireUI(){
   if($("resetManager"))$("resetManager").addEventListener("click",resetManager);
   if($("saveManager"))$("saveManager").addEventListener("click",()=>saveManager().catch(e=>{logError("Enregistrement manager",e?.message||String(e));toast(e?.message||String(e));}));
   if($("createManagersTable"))$("createManagersTable").addEventListener("click",createManagersTable);
+  if($("createRequestParamsTable"))$("createRequestParamsTable").addEventListener("click",createRequestParamsTable);
+  if($("saveAutoValidationDelay"))$("saveAutoValidationDelay").addEventListener("click",saveAutoValidationDelay);
   $("diagRefresh").addEventListener("click",load);
   $("diagClear").addEventListener("click",clearLog);
   if($("newMotif"))$("newMotif").addEventListener("click",openMotifModal);

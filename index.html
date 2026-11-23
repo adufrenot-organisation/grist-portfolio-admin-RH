@@ -1,5 +1,5 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Administration RH / PMO · v3.0</title><link rel="stylesheet" href="styles.css"><script src="https://docs.getgrist.com/grist-plugin-api.js"></script></head><body><div id="app">
-<aside class="sidebar"><div class="brand"><div class="mark">⚙</div><div><strong>RH / PMO</strong><small>Administration</small></div></div><nav><button class="nav-item active" data-view="ressources">Ressources</button><button class="nav-item" data-view="seuils">Seuils</button><button class="nav-item" data-view="motifs">Motifs RH</button><button class="nav-item" data-view="equipes">Équipes</button><button class="nav-item" data-view="managers">Managers d’équipes</button><button class="nav-item" data-view="diagnostic">Diagnostic <span id="diagBadge"></span></button></nav><div class="sidebar-footer"><div class="sync" id="sync">Connexion…</div><div class="app-version">Administration RH · V3.0</div></div></aside>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Administration RH / PMO · v3.1</title><link rel="stylesheet" href="styles.css"><script src="https://docs.getgrist.com/grist-plugin-api.js"></script></head><body><div id="app">
+<aside class="sidebar"><div class="brand"><div class="mark">⚙</div><div><strong>RH / PMO</strong><small>Administration</small></div></div><nav><button class="nav-item active" data-view="ressources">Ressources</button><button class="nav-item" data-view="seuils">Seuils</button><button class="nav-item" data-view="motifs">Motifs RH</button><button class="nav-item" data-view="equipes">Équipes</button><button class="nav-item" data-view="managers">Managers d’équipes</button><button class="nav-item" data-view="demandes">Demandes RH</button><button class="nav-item" data-view="diagnostic">Diagnostic <span id="diagBadge"></span></button></nav><div class="sidebar-footer"><div class="sync" id="sync">Connexion…</div><div class="app-version">Administration RH · V3.1</div></div></aside>
 <main class="main"><header class="topbar"><div><h1 id="title">Ressources</h1><p id="subtitle">Référentiel Team partagé avec le PMO</p></div><button class="btn secondary" id="refresh">Actualiser</button></header>
 
 <section class="view active" id="ressources"><div class="grid2"><div class="card"><div class="section"><div><h2>Team</h2><p>Référentiel unique PMO + RH</p></div><button class="btn" id="newResource">Nouvelle</button></div><div class="table-wrap"><table><thead><tr><th>Nom</th><th>Équipe</th><th>Rôle</th><th>ETP</th><th>Actif</th></tr></thead><tbody id="resourceRows"></tbody></table></div></div>
@@ -34,6 +34,23 @@
     </div>
   </div>
 </section>
+
+<section class="view" id="demandes">
+  <div class="card" id="requestParamsSetup" hidden>
+    <div class="section"><div><h2>Paramètres des demandes RH</h2><p>La table PARAM_DEMANDES_RH n’existe pas encore.</p></div></div>
+    <div class="recommended-note">Cette table est partagée avec le Cockpit RH et contient les paramètres de traitement des demandes, dont le délai d’auto-validation.</div>
+    <button class="btn" id="createRequestParamsTable">Créer la table PARAM_DEMANDES_RH</button>
+  </div>
+  <div class="card" id="requestParamsContent" hidden>
+    <div class="section"><div><h2>Auto-validation des demandes</h2><p>Temps laissé au manager pour valider ou refuser manuellement avant l’auto-validation.</p></div></div>
+    <div class="form">
+      <label>Délai d’auto-validation (secondes)<input id="autoValidationDelaySeconds" type="number" min="0" max="86400" step="1" value="15"></label>
+      <div class="param-state" id="autoValidationParamState"></div>
+    </div>
+    <div class="motif-hint">0 = auto-validation dès le prochain contrôle du Cockpit. La valeur est lue dans <strong>PARAM_DEMANDES_RH</strong>, clé <strong>DELAI_AUTO_VALIDATION_SECONDES</strong>.</div>
+    <div class="actions"><button class="btn" id="saveAutoValidationDelay">Enregistrer</button></div>
+  </div>
+</section>
 <section class="view" id="diagnosticView">
 <div class="card">
   <div class="section"><div><h2>Diagnostic technique</h2><p>État des tables et journal des erreurs du widget</p></div>
@@ -59,4 +76,4 @@
     <div class="actions modal-actions"><button class="btn secondary" id="cancelMotif">Annuler</button><button class="btn" id="saveNewMotif">Créer le motif</button></div>
   </div>
 </div>
-<div class="toast" id="toast"></div><script src="presence.js?v=2.0"></script><script src="access.js?v=1.2.0"></script><script src="app.js?v=2.9"></script></body></html>
+<div class="toast" id="toast"></div><script src="presence.js?v=2.0"></script><script src="access.js?v=1.2.0"></script><script src="app.js?v=3.1"></script></body></html>
